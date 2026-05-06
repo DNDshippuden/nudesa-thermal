@@ -82,27 +82,59 @@
     // 1. Fungsi Hubungkan Printer Bluetooth
     async function connectPrinterManually() {
         try {
+            // Daftar UUID Service umum yang digunakan oleh printer thermal
+            const OPTIONAL_SERVICES = [
+                '000018f0-0000-1000-8000-00805f9b34fb', // Umum
+                '0000ff00-0000-1000-8000-00805f9b34fb', // Perbaikan untuk alias 'ff00'
+                'e7e11001-49d2-4d15-8c74-e91155a1040a'  // Printer merek tertentu
+            ];
+    
+            // Meminta izin akses perangkat
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'ff00']
+                optionalServices: OPTIONAL_SERVICES
             });
-
-            Swal.fire({ title: 'Menghubungkan...', didOpen: () => Swal.showLoading() });
-
+    
+            Swal.fire({ 
+                title: 'Menghubungkan...', 
+                text: `Menyambungkan ke ${bluetoothDevice.name}`,
+                allowOutsideClick: false, 
+                didOpen: () => Swal.showLoading() 
+            });
+    
             const server = await bluetoothDevice.gatt.connect();
-            const services = await server.getPrimaryServices();
             
-            // Mencari characteristic yang bisa menulis data (Write)
-            for (const service of services) {
-                const characteristics = await service.getCharacteristics();
-                printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
-                if (printCharacteristic) break;
+            // Mencari service yang tersedia dari daftar UUID di atas
+            let service;
+            for (const uuid of OPTIONAL_SERVICES) {
+                try {
+                    service = await server.getPrimaryService(uuid);
+                    if (service) break;
+                } catch (e) {
+                    continue; // Lanjut cari jika service UUID ini tidak ditemukan di perangkat
+                }
             }
-
-            if (!printCharacteristic) throw new Error("Printer tidak mendukung pengiriman data.");
-
-            Swal.fire('Berhasil!', `Terhubung ke ${bluetoothDevice.name}`, 'success');
+    
+            if (!service) throw new Error("Service printer tidak ditemukan. Pastikan printer menyala.");
+    
+            const characteristics = await service.getCharacteristics();
+            
+            // Mencari characteristic yang mendukung penulisan (Write)
+            printCharacteristic = characteristics.find(c => 
+                c.properties.write || c.properties.writeWithoutResponse
+            );
+    
+            if (!printCharacteristic) throw new Error("Karakteristik tulis tidak ditemukan.");
+    
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: `Terhubung ke ${bluetoothDevice.name}`,
+                timer: 2000
+            });
+    
         } catch (error) {
+            console.error("Bluetooth Error:", error);
             Swal.fire('Gagal', error.message, 'error');
         }
     }
