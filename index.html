@@ -3,171 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak Struk Bluetooth - Sm@RT Digital-Nudesa</title>
+    <title>Sm@RT Print - Bluetooth Center</title>
     
-    <!-- CDNs: Pastikan Library Encoder dimuat di awal -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Library Utama untuk Printer -->
-    <script src="https://unpkg.com/esc-pos-encoder@2.1.0/dist/esc-pos-encoder.js"></script>
+    <!-- Library Baru: WebBluetoothReceiptPrinter -->
+    <script src="webbluetooth-receipt-printer.umd.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        :root {
-            --primary-dark: #1e293b;
-            --success: #22c55e;
-            --surface: #ffffff;
-            --border: #e2e8f0;
-            --radius-md: 1rem;
-            --shadow-soft: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-        }
+        :root { --primary-dark: #1e293b; --surface: #ffffff; --border: #e2e8f0; }
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .input-box {
-            width: 100%;
-            padding: 0.6rem;
-            border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
+        .input-box { width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 0.5rem; outline: none; }
     </style>
 </head>
 <body class="p-4">
 
 <main class="max-w-md mx-auto">
-    <section class="manual-input-card" style="background: var(--surface); padding: 1.2rem; border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: 1.5rem; box-shadow: var(--shadow-soft);">
-        <h3 style="margin-bottom: 1rem; font-size: 1rem; color: var(--primary-dark); font-weight: 700;">
-            <i class="fas fa-file-invoice me-2"></i>Input Struk Manual
-        </h3>
+    <section class="bg-white p-5 rounded-3xl shadow-xl border border-slate-100">
+        <h3 class="text-lg font-bold text-slate-800 mb-4"><i class="fas fa-print me-2"></i>Cetak Struk NUDESA mobile</h3>
         
-        <!-- Form Inputs -->
-        <div class="form-group mb-3">
-            <label class="block text-xs font-semibold mb-1">Nama Pelanggan</label>
-            <input type="text" id="manual-nama" class="input-box" placeholder="Budi Santoso">
-        </div>
-
-        <div class="form-group mb-3">
-            <label class="block text-xs font-semibold mb-1">Alamat</label>
-            <input type="text" id="manual-alamat" class="input-box" placeholder="Alamat lengkap">
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 mb-4">
-            <div class="form-group">
-                <label class="block text-xs font-semibold mb-1">Tagihan (Rp)</label>
-                <input type="number" id="manual-tagihan" class="input-box text-right" placeholder="0">
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Nama Pelanggan</label>
+                <input type="text" id="manual-nama" class="input-box" placeholder="Budi Santoso">
             </div>
-            <div class="form-group">
-                <label class="block text-xs font-semibold mb-1">Status</label>
-                <select id="manual-status" class="input-box">
-                    <option value="KONTAN">KONTAN</option>
-                    <option value="HUTANG">HUTANG</option>
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Alamat</label>
+                <!-- <input type="text" id="manual-alamat" class="input-box" placeholder="Alamat lengkap"> -->
+                <select id="manual-alamat" class="input-box">
+                    <option value="SUKANAGARA">SUKANAGARA</option>
+                    <option value="TAKOKAK">TAKOKAK</option>
                 </select>
             </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Tagihan (Rp)</label>
+                    <input type="number" id="manual-tagihan" class="input-box text-right" placeholder="0">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Status</label>
+                    <select id="manual-status" class="input-box">
+                        <option value="KONTAN">KONTAN</option>
+                        <option value="HUTANG">HUTANG</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
-        <div class="flex gap-2">
-            <button onclick="connectPrinterManually()" class="flex-1 bg-slate-800 text-white rounded-xl p-3 text-sm font-bold">
-                <i class="fab fa-bluetooth me-1"></i>Hubungkan
+        <div class="flex gap-2 mt-6">
+            <button onclick="handleConnectButtonClick()" class="flex-1 bg-slate-800 text-white rounded-xl py-3 font-bold text-sm shadow-lg active:scale-95 transition-transform">
+                <i class="fab fa-bluetooth-b me-2"></i>Connect
             </button>
-            <button onclick="printManualReceipt()" class="flex-1 bg-green-500 text-white rounded-xl p-3 text-sm font-bold">
-                <i class="fas fa-print me-1"></i>Cetak Struk
+            <button onclick="printManualReceipt()" class="flex-1 bg-green-500 text-white rounded-xl py-3 font-bold text-sm shadow-lg active:scale-95 transition-transform">
+                <i class="fas fa-print me-2"></i>Cetak
             </button>
         </div>
+        <p id="statusPrinter" class="text-[10px] text-center mt-3 text-slate-400 italic">Printer belum terhubung</p>
     </section>
 </main>
 
 <script>
-    let bluetoothDevice;
-    let printCharacteristic;
+    // Inisialisasi library
+    const receiptPrinter = new WebBluetoothReceiptPrinter();
+    let lastUsedDevice = null;
 
-    // Fungsi Koneksi Bluetooth
-    async function connectPrinterManually() {
+    // Event Listener saat printer terhubung
+    receiptPrinter.addEventListener('connected', device => {
+        console.log(`Connected to ${device.name} (#${device.id})`);
+        document.getElementById('statusPrinter').innerText = `Terhubung: ${device.name}`;
+        lastUsedDevice = device;
+        
+        // Simpan ke local storage agar bisa auto-reconnect nanti
+        localStorage.setItem('last_printer', JSON.stringify({id: device.id, name: device.name}));
+        
+        Swal.fire('Terhubung!', `Printer ${device.name} siap digunakan.`, 'success');
+    });
+
+    // Mencoba Reconnect otomatis saat halaman dimuat
+    window.onload = () => {
+        const saved = localStorage.getItem('last_printer');
+        if (saved) {
+            receiptPrinter.reconnect(JSON.parse(saved));
+        }
+    };
+
+    // Fungsi tombol Connect
+    async function handleConnectButtonClick() {
         try {
-            const OPTIONAL_SERVICES = [
-                '000018f0-0000-1000-8000-00805f9b34fb',
-                '0000ff00-0000-1000-8000-00805f9b34fb',
-                'e7e11001-49d2-4d15-8c74-e91155a1040a'
-            ];
-
-            bluetoothDevice = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: OPTIONAL_SERVICES
-            });
-
-            Swal.fire({ title: 'Menghubungkan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-            const server = await bluetoothDevice.gatt.connect();
-            
-            let service;
-            for (const uuid of OPTIONAL_SERVICES) {
-                try {
-                    service = await server.getPrimaryService(uuid);
-                    if (service) break;
-                } catch (e) { continue; }
-            }
-
-            if (!service) throw new Error("Service printer tidak ditemukan.");
-
-            const characteristics = await service.getCharacteristics();
-            printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
-
-            if (!printCharacteristic) throw new Error("Karakteristik tulis tidak ditemukan.");
-
-            Swal.fire('Berhasil!', `Terhubung ke ${bluetoothDevice.name}`, 'success');
-        } catch (error) {
-            Swal.fire('Gagal', error.message, 'error');
+            await receiptPrinter.connect();
+        } catch (e) {
+            Swal.fire('Info', 'Koneksi dibatalkan.', 'info');
         }
     }
 
-    // Fungsi Cetak dengan Pengecekan Library
+    // Fungsi Cetak Struk
     async function printManualReceipt() {
-        // 1. Cek apakah library sudah dimuat
-        if (typeof EscPosEncoder === 'undefined') {
-            return Swal.fire('Error', 'Library Cetak belum dimuat sempurna. Tunggu sebentar atau refresh halaman.', 'error');
-        }
-
-        if (!printCharacteristic) {
-            return Swal.fire('Peringatan', 'Hubungkan printer Bluetooth terlebih dahulu!', 'warning');
+        if (!lastUsedDevice) {
+            return Swal.fire('Peringatan', 'Hubungkan printer dulu!', 'warning');
         }
 
         const nama = document.getElementById('manual-nama').value || '-';
         const alamat = document.getElementById('manual-alamat').value || '-';
-        const tagihan = document.getElementById('manual-tagihan').value || '0';
+        const tagihan = new Intl.NumberFormat('id-ID').format(document.getElementById('manual-tagihan').value || 0);
         const status = document.getElementById('manual-status').value;
 
+        // Memulai proses pembuatan data cetak
+        const encoder = new receiptPrinter.encoder(); 
+        
+        encoder.initialize();
+        encoder.align('center');
+        encoder.line('SM@RT DIGITAL');
+        encoder.line('WADAH RT 001/002');
+        encoder.line('--------------------------------');
+        encoder.align('left');
+        encoder.line(`NAMA  : ${nama}`);
+        encoder.line(`ALMT  : ${alamat}`);
+        encoder.line(`TGL   : ${new Date().toLocaleDateString('id-ID')}`);
+        encoder.line('--------------------------------');
+        encoder.line(`TOTAL : Rp ${tagihan}`);
+        encoder.line(`STATUS: ${status}`);
+        encoder.line('--------------------------------');
+        encoder.align('center');
+        encoder.line('SIMPAN SEBAGAI BUKTI');
+        encoder.newline();
+        encoder.newline();
+
+        // Mengirim ke printer
         try {
-            // Memanggil constructor library secara eksplisit
-            const encoder = new EscPosEncoder();
-            const formattedTagihan = new Intl.NumberFormat('id-ID').format(tagihan);
-
-            let data = encoder
-                .initialize()
-                .align('center')
-                .line('SM@RT DIGITAL')
-                .line('RT 001/002 - WADAH RT')
-                .line('--------------------------------')
-                .align('left')
-                .line(`NAMA  : ${nama.substring(0, 22)}`)
-                .line(`ALMT  : ${alamat.substring(0, 22)}`)
-                .line(`TGL   : ${new Date().toLocaleDateString('id-ID')}`)
-                .line('--------------------------------')
-                .line(`TOTAL : Rp ${formattedTagihan}`)
-                .line(`STATUS: ${status}`)
-                .line('--------------------------------')
-                .align('center')
-                .line('TERIMA KASIH')
-                .newline()
-                .newline()
-                .encode();
-
-            const chunkSize = 20;
-            for (let i = 0; i < data.length; i += chunkSize) {
-                await printCharacteristic.writeValue(data.slice(i, i + chunkSize));
-            }
-
+            await receiptPrinter.print(encoder.encode());
             Swal.fire('Sukses', 'Struk berhasil dicetak!', 'success');
-        } catch (error) {
-            Swal.fire('Gagal Cetak', error.message, 'error');
+        } catch (e) {
+            Swal.fire('Error', 'Gagal mencetak: ' + e.message, 'error');
         }
     }
 </script>
