@@ -1,191 +1,160 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sm@RT Print - Bluetooth Center</title>
-  
-  <!-- CDNs -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="https://unpkg.com/esc-pos-encoder@2.1.0/dist/esc-pos-encoder.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cetak Struk Bluetooth - Sm@RT Digital</title>
+    <!-- CDNs -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/esc-pos-encoder@2.1.0/dist/esc-pos-encoder.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
-    body { font-family: 'Plus Jakarta Sans', sans-serif; }
-    .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-  </style>
+    <style>
+        :root {
+            --primary-dark: #1e293b;
+            --success: #22c55e;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --radius-md: 1rem;
+            --shadow-soft: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .input-box {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-box:focus { border-color: #3b82f6; }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen">
+<body class="p-4">
 
-  <div class="max-w-md mx-auto px-6 pt-10">
-    <!-- Header -->
-    <div class="text-center mb-10">
-      <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 text-white rounded-3xl mb-4 shadow-xl shadow-blue-200">
-        <i class="fa-brands fa-bluetooth-b text-4xl"></i>
-      </div>
-      <h1 class="text-2xl font-bold text-slate-800">Sm@RT Print</h1>
-      <p class="text-slate-500 text-sm">Cetak Struk Langsung dari Android</p>
-    </div>
-
-    <!-- Tombol Scan -->
-    <div class="glass-card rounded-3xl p-6 shadow-xl border border-white mb-8">
-      <button onclick="pairingPrinterBaru()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg active:scale-95">
-        <i class="fas fa-search"></i>
-        Cari & Pasangkan Printer
-      </button>
-    </div>
-
-    <!-- Daftar Printer Tersimpan -->
-    <div class="flex items-center justify-between mb-4 px-2">
-      <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Printer Tersimpan</h2>
-      <button onclick="hapusSemuaHistory()" class="text-red-400 text-[10px] font-bold">HAPUS SEMUA</button>
-    </div>
-
-    <div id="listPrinterContainer" class="space-y-4">
-      <!-- Item printer akan muncul di sini via JS -->
-    </div>
-
-    <!-- Info Footer -->
-    <div id="emptyState" class="hidden text-center py-10 bg-white rounded-3xl border-2 border-dashed border-slate-200 mt-4">
-      <i class="fas fa-print text-slate-200 text-4xl mb-3"></i>
-      <p class="text-slate-400 text-xs">Belum ada printer yang terdaftar di HP ini</p>
-    </div>
-  </div>
-
-  <script>
-    const STORAGE_KEY = 'SMART_PRINTER_LOG';
-
-    // 1. Fungsi Pairing (Mencari Perangkat Baru)
-    async function pairingPrinterBaru() {
-      if (!navigator.bluetooth) {
-        return Swal.fire('Error', 'Browser tidak mendukung Bluetooth. Gunakan Chrome di Android.', 'error');
-      }
-
-      try {
-        const device = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
-          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'ff00']
-        });
-
-        const newPrinter = {
-          id: device.id,
-          name: device.name || 'Thermal Printer',
-          date: new Date().toLocaleString('id-ID')
-        };
-
-        simpanKeLocalStorage(newPrinter);
+<main class="max-w-md mx-auto">
+    <!-- Section Input Manual -->
+    <section class="manual-input-card" style="background: var(--surface); padding: 1.2rem; border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: 1.5rem; box-shadow: var(--shadow-soft);">
+        <h3 style="margin-bottom: 1rem; font-size: 1rem; color: var(--primary-dark); font-weight: 700;">
+            <i class="fas fa-file-invoice me-2"></i>Input Struk Manual
+        </h3>
         
-        Swal.fire({
-          icon: 'success',
-          title: 'Berhasil Pairing',
-          text: `${newPrinter.name} telah disimpan di browser ini.`,
-          timer: 2000
-        });
+        <div class="form-group" style="margin-bottom: 0.8rem;">
+            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.3rem;">Nama Pelanggan</label>
+            <input type="text" id="manual-nama" class="input-box" placeholder="Contoh: Desaku">
+        </div>
 
-        muatDaftarPrinter();
+        <div class="form-group" style="margin-bottom: 0.8rem;">
+            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.3rem;">Alamat</label>
+            <input type="text" id="manual-alamat" class="input-box" placeholder="Alamat lengkap">
+        </div>
 
-      } catch (error) {
-        console.log("User membatalkan pencarian");
-      }
-    }
-
-    // 2. Simpan Data ke LocalStorage HP
-    function simpanKeLocalStorage(printer) {
-      let saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-      const exists = saved.find(p => p.id === printer.id);
-      if (!exists) {
-        saved.push(printer);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-      }
-    }
-
-    // 3. Menampilkan Daftar Printer
-    function muatDaftarPrinter() {
-      const container = document.getElementById('listPrinterContainer');
-      const empty = document.getElementById('emptyState');
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-
-      container.innerHTML = '';
-      
-      if (saved.length === 0) {
-        empty.classList.remove('hidden');
-        return;
-      }
-
-      empty.classList.add('hidden');
-      saved.forEach(p => {
-        container.innerHTML += `
-          <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
-                <i class="fas fa-print"></i>
-              </div>
-              <div>
-                <div class="font-bold text-slate-800 text-sm">${p.name}</div>
-                <div class="text-[10px] text-slate-400">${p.date}</div>
-              </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+            <div class="form-group">
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.3rem;">Tagihan (Rp)</label>
+                <input type="number" id="manual-tagihan" class="input-box" style="text-align: right;" placeholder="0">
             </div>
-            <button onclick="ujiCobaCetak('${p.id}')" class="bg-blue-600 text-white text-[10px] font-bold px-4 py-2 rounded-xl shadow-md">
-              TEST PRINT
+            <div class="form-group">
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.3rem;">Status</label>
+                <select id="manual-status" class="input-box">
+                    <option value="KONTAN">KONTAN</option>
+                    <option value="HUTANG">HUTANG</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.2rem; display: flex; gap: 0.5rem;">
+            <button onclick="connectPrinterManually()" class="bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-all" style="flex: 1; padding: 0.8rem; font-size: 0.8rem; font-weight: 600;">
+                <i class="fab fa-bluetooth me-1"></i>Hubungkan
             </button>
-          </div>
-        `;
-      });
+            <button onclick="printManualReceipt()" class="bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all" style="flex: 1; padding: 0.8rem; font-size: 0.8rem; font-weight: 600;">
+                <i class="fas fa-print me-1"></i>Cetak Struk
+            </button>
+        </div>
+    </section>
+</main>
+
+<script>
+    let bluetoothDevice;
+    let printCharacteristic;
+
+    // 1. Fungsi Hubungkan Printer Bluetooth
+    async function connectPrinterManually() {
+        try {
+            bluetoothDevice = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'ff00']
+            });
+
+            Swal.fire({ title: 'Menghubungkan...', didOpen: () => Swal.showLoading() });
+
+            const server = await bluetoothDevice.gatt.connect();
+            const services = await server.getPrimaryServices();
+            
+            // Mencari characteristic yang bisa menulis data (Write)
+            for (const service of services) {
+                const characteristics = await service.getCharacteristics();
+                printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
+                if (printCharacteristic) break;
+            }
+
+            if (!printCharacteristic) throw new Error("Printer tidak mendukung pengiriman data.");
+
+            Swal.fire('Berhasil!', `Terhubung ke ${bluetoothDevice.name}`, 'success');
+        } catch (error) {
+            Swal.fire('Gagal', error.message, 'error');
+        }
     }
 
-    // 4. Fungsi Cetak Uji Coba (ESC/POS 58mm)
-    async function ujiCobaCetak(deviceId) {
-      try {
-        Swal.fire({ title: 'Menghubungkan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-        // Browser butuh requestDevice lagi untuk mendapatkan izin session
-        const device = await navigator.bluetooth.requestDevice({
-          filters: [{ id: deviceId }],
-          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'ff00']
-        });
-
-        const server = await device.gatt.connect();
-        const services = await server.getPrimaryServices();
-        let service = services[0];
-        const characteristics = await service.getCharacteristics();
-        let characteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
-
-        const encoder = new EscPosEncoder();
-        let data = encoder
-          .initialize()
-          .align('center')
-          .line('SM@RT DIGITAL')
-          .line('RT 001/002')
-          .line('--------------------------------')
-          .line('UJI COBA BERHASIL!')
-          .line(new Date().toLocaleTimeString())
-          .line('--------------------------------')
-          .newline()
-          .newline()
-          .encode();
-
-        // Kirim data dalam paket kecil (20 bytes) agar printer tidak hang
-        const chunkSize = 20;
-        for (let i = 0; i < data.length; i += chunkSize) {
-          await characteristic.writeValue(data.slice(i, i + chunkSize));
+    // 2. Fungsi Cetak Struk Manual
+    async function printManualReceipt() {
+        if (!printCharacteristic) {
+            return Swal.fire('Peringatan', 'Hubungkan printer Bluetooth terlebih dahulu!', 'warning');
         }
 
-        Swal.fire('Sukses', 'Data berhasil dicetak!', 'success');
+        const nama = document.getElementById('manual-nama').value || '-';
+        const alamat = document.getElementById('manual-alamat').value || '-';
+        const tagihan = document.getElementById('manual-tagihan').value || '0';
+        const status = document.getElementById('manual-status').value;
 
-      } catch (error) {
-        Swal.fire('Gagal', error.message, 'error');
-      }
+        try {
+            const encoder = new EscPosEncoder();
+            const formattedTagihan = new Intl.NumberFormat('id-ID').format(tagihan);
+
+            let data = encoder
+                .initialize()
+                .align('center')
+                .line('SM@RT DIGITAL')
+                .line('RT 001/002 - Kelurahan')
+                .line('--------------------------------') // 32 chars for 58mm
+                .align('left')
+                .line(`Nama  : ${nama.substring(0, 20)}`)
+                .line(`Almt  : ${alamat.substring(0, 20)}`)
+                .line(`Tgl   : ${new Date().toLocaleDateString('id-ID')}`)
+                .line('--------------------------------')
+                .align('left')
+                .line(`TOTAL : Rp ${formattedTagihan}`)
+                .line(`STATUS: ${status}`)
+                .line('--------------------------------')
+                .align('center')
+                .line('Terima Kasih Atas')
+                .line('Pembayaran Anda')
+                .newline()
+                .newline()
+                .encode();
+
+            // Mengirim data per paket (chunk) 20 bytes agar stabil di Android
+            const chunkSize = 20;
+            for (let i = 0; i < data.length; i += chunkSize) {
+                await printCharacteristic.writeValue(data.slice(i, i + chunkSize));
+            }
+
+            Swal.fire('Sukses', 'Struk berhasil dicetak!', 'success');
+        } catch (error) {
+            Swal.fire('Gagal Cetak', error.message, 'error');
+        }
     }
-
-    function hapusSemuaHistory() {
-      localStorage.removeItem(STORAGE_KEY);
-      muatDaftarPrinter();
-    }
-
-    // Load list saat buka halaman
-    window.onload = muatDaftarPrinter;
-  </script>
+</script>
 </body>
 </html>
