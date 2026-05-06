@@ -67,73 +67,98 @@
     // Inisialisasi library
     const receiptPrinter = new WebBluetoothReceiptPrinter();
     let lastUsedDevice = null;
-
+    let printerLanguage = 'esc-pos'; // Default
+    let printerCodepageMapping = 'standard'; // Default
+    
     // Event Listener saat printer terhubung
     receiptPrinter.addEventListener('connected', device => {
         console.log(`Connected to ${device.name} (#${device.id})`);
         document.getElementById('statusPrinter').innerText = `Terhubung: ${device.name}`;
+        
+        // Ambil detail bahasa printer dari device
+        printerLanguage = device.language;
+        printerCodepageMapping = device.codepageMapping;
+        
         lastUsedDevice = device;
         
-        // Simpan ke local storage agar bisa auto-reconnect nanti
-        localStorage.setItem('last_printer', JSON.stringify({id: device.id, name: device.name}));
+        // Simpan ke local storage
+        localStorage.setItem('last_printer', JSON.stringify({
+            id: device.id, 
+            name: device.name,
+            language: device.language,
+            codepageMapping: device.codepageMapping
+        }));
         
         Swal.fire('Terhubung!', `Printer ${device.name} siap digunakan.`, 'success');
     });
-
-    // Mencoba Reconnect otomatis saat halaman dimuat
+    
+    // Mencoba Reconnect otomatis
     window.onload = () => {
         const saved = localStorage.getItem('last_printer');
         if (saved) {
-            receiptPrinter.reconnect(JSON.parse(saved));
+            const config = JSON.parse(saved);
+            lastUsedDevice = config; // Set data awal
+            printerLanguage = config.language;
+            printerCodepageMapping = config.codepageMapping;
+            receiptPrinter.reconnect(config);
         }
     };
-
+    
     // Fungsi tombol Connect
     async function handleConnectButtonClick() {
         try {
+            // Beberapa browser butuh interaksi user yang sangat jelas
             await receiptPrinter.connect();
         } catch (e) {
-            Swal.fire('Info', 'Koneksi dibatalkan.', 'info');
+            console.error(e);
+            // Jika error mengandung kata "User cancelled", itu berarti dialog ditutup
+            Swal.fire('Info', 'Koneksi dibatalkan atau printer tidak dipilih.', 'info');
         }
     }
-
+    
     // Fungsi Cetak Struk
     async function printManualReceipt() {
         if (!lastUsedDevice) {
             return Swal.fire('Peringatan', 'Hubungkan printer dulu!', 'warning');
         }
-
+    
         const nama = document.getElementById('manual-nama').value || '-';
         const alamat = document.getElementById('manual-alamat').value || '-';
         const tagihan = new Intl.NumberFormat('id-ID').format(document.getElementById('manual-tagihan').value || 0);
         const status = document.getElementById('manual-status').value;
-
-        // Memulai proses pembuatan data cetak
-        const encoder = new receiptPrinter.encoder(); 
-        
-        encoder.initialize();
-        encoder.align('center');
-        encoder.line('SM@RT DIGITAL');
-        encoder.line('WADAH RT 001/002');
-        encoder.line('--------------------------------');
-        encoder.align('left');
-        encoder.line(`NAMA  : ${nama}`);
-        encoder.line(`ALMT  : ${alamat}`);
-        encoder.line(`TGL   : ${new Date().toLocaleDateString('id-ID')}`);
-        encoder.line('--------------------------------');
-        encoder.line(`TOTAL : Rp ${tagihan}`);
-        encoder.line(`STATUS: ${status}`);
-        encoder.line('--------------------------------');
-        encoder.align('center');
-        encoder.line('SIMPAN SEBAGAI BUKTI');
-        encoder.newline();
-        encoder.newline();
-
-        // Mengirim ke printer
+    
         try {
-            await receiptPrinter.print(encoder.encode());
+            // Penting: Sertakan language dan codepage agar karakter tidak error
+            const encoder = new receiptPrinter.encoder({
+                language: printerLanguage,
+                codepageMapping: printerCodepageMapping
+            }); 
+            
+            let data = encoder
+                .initialize()
+                .align('center')
+                .line('SM@RT DIGITAL')
+                .line('WADAH RT 001/002')
+                .line('--------------------------------')
+                .align('left')
+                .line(`NAMA  : ${nama.toUpperCase()}`)
+                .line(`ALMT  : ${alamat}`)
+                .line(`TGL   : ${new Date().toLocaleDateString('id-ID')}`)
+                .line('--------------------------------')
+                .line(`TOTAL : Rp ${tagihan}`)
+                .line(`STATUS: ${status}`)
+                .line('--------------------------------')
+                .align('center')
+                .line('SIMPAN SEBAGAI BUKTI')
+                .newline()
+                .newline()
+                .cut() // Tambahkan cut jika printer mendukung
+                .encode();
+    
+            await receiptPrinter.print(data);
             Swal.fire('Sukses', 'Struk berhasil dicetak!', 'success');
         } catch (e) {
+            console.error(e);
             Swal.fire('Error', 'Gagal mencetak: ' + e.message, 'error');
         }
     }
