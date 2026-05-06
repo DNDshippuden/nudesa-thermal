@@ -7,7 +7,10 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>MyTix POS - Premium Mobile</title>
+    <title>NUDESA Mobile</title>
+    
+    <script src="https://unpkg.com/@point-of-sale/receipt-printer-encoder@latest/dist/receipt-printer-encoder.umd.js"></script>
+    
     <style>
         :root {
             --primary: #007aff;
@@ -2655,57 +2658,54 @@
 
         // FUNGSI TAMBAHAN BARU
         async function printManualReceipt() {
-            const nama = document.getElementById('manual-nama').value || '-';
-            const alamat = document.getElementById('manual-alamat').value || '-';
-            const tagihan = document.getElementById('manual-tagihan').value || 0;
-            const status = document.getElementById('manual-status').value;
-        
-            if (tagihan <= 0) {
-                alert('Masukkan jumlah tagihan yang valid!');
-                return;
-            }
-        
-            if (!isPrinterConnected) {
-                alert('Printer belum terhubung! Klik "Hubungkan Bluetooth" terlebih dahulu.');
+            // 1. Validasi Koneksi
+            if (!printCharacteristic) {
+                alert('Printer belum terhubung!');
                 return;
             }
         
             try {
-                const width = getReceiptColumns_();
-                let encoder = new ReceiptPrinterEncoder({ language: 'esc-pos', columns: width });
+                const nama = document.getElementById('manual-nama').value || '-';
+                const tagihan = document.getElementById('manual-tagihan').value || '0';
                 
-                const dateNow = new Date().toLocaleString('id-ID');
+                // 2. Inisialisasi Encoder (Pastikan library sudah terload di HTML)
+                // Jika menggunakan versi UMD, biasanya diakses via window.ReceiptPrinterEncoder
+                const encoder = new ReceiptPrinterEncoder({
+                    language: 'esc-pos',
+                    width: 32 // Sesuaikan dengan lebar kertas (32 atau 42)
+                });
         
-                let data = encoder
+                // 3. Bangun Data (Gunakan metode yang paling kompatibel)
+                const dateNow = new Date().toLocaleString('id-ID');
+                
+                let result = encoder
                     .initialize()
                     .align('center')
-                    .bold(true)
                     .line('MYTIX POS')
-                    .bold(false)
-                    .line('Struk Pembayaran')
-                    .line('-'.repeat(width))
+                    .line('--------------------------------')
                     .align('left')
-                    .line(`Tgl    : ${dateNow}`)
-                    .line(`Nama   : ${nama}`)
-                    .line(`Alamat : ${alamat}`)
-                    .line(`Status : ${status}`)
-                    .line('-'.repeat(width))
-                    .bold(true)
-                    .line(formatReceiptLine_('TOTAL', `Rp ${formatNumberID(tagihan)}`, width))
-                    .bold(false)
-                    .line('-'.repeat(width))
+                    .line('Tgl   : ' + dateNow)
+                    .line('Nama  : ' + nama)
+                    .line('Total : Rp ' + tagihan)
+                    .line('--------------------------------')
                     .newline()
-                    .align('center')
-                    .line('Terima kasih')
-                    .line('Sudah berlangganan!')
-                    .newline()
-                    .cut()
                     .encode();
         
-                await receiptPrinter.print(data);
-                alert('Struk berhasil dicetak!');
+                // 4. Kirim ke Printer dengan Penanganan "Null"
+                if (!result) {
+                    throw new Error("Gagal mengencode data (Data null)");
+                }
+        
+                // Kirim bertahap (Chunking 20 bytes) untuk Android
+                for (let i = 0; i < result.length; i += 20) {
+                    const chunk = result.slice(i, i + 20);
+                    await printCharacteristic.writeValue(chunk);
+                }
+        
+                alert('Cetak Berhasil!');
+        
             } catch (error) {
-                console.error(error);
+                console.error("Detail Error:", error);
                 alert('Gagal mencetak: ' + error.message);
             }
         }
