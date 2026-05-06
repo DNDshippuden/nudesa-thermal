@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sm@RT Print - Bluetooth Center</title>
+    <title>Sm@RT Print - NUDESA Mobile 2</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Library Baru: WebBluetoothReceiptPrinter -->
-    <script src="webbluetooth-receipt-printer.umd.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -21,7 +19,9 @@
 
 <main class="max-w-md mx-auto">
     <section class="bg-white p-5 rounded-3xl shadow-xl border border-slate-100">
-        <h3 class="text-lg font-bold text-slate-800 mb-4"><i class="fas fa-print me-2"></i>Cetak Struk NUDESA mobile</h3>
+        <h3 class="text-lg font-bold text-slate-800 mb-4">
+            <i class="fas fa-print me-2 text-blue-600"></i>Cetak Struk NUDESA
+        </h3>
         
         <div class="space-y-3">
             <div>
@@ -29,8 +29,7 @@
                 <input type="text" id="manual-nama" class="input-box" placeholder="Budi Santoso">
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Alamat</label>
-                <!-- <input type="text" id="manual-alamat" class="input-box" placeholder="Alamat lengkap"> -->
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Wilayah</label>
                 <select id="manual-alamat" class="input-box">
                     <option value="SUKANAGARA">SUKANAGARA</option>
                     <option value="TAKOKAK">TAKOKAK</option>
@@ -52,10 +51,10 @@
         </div>
 
         <div class="flex gap-2 mt-6">
-            <button onclick="handleConnectButtonClick()" class="flex-1 bg-slate-800 text-white rounded-xl py-3 font-bold text-sm shadow-lg active:scale-95 transition-transform">
+            <button id="btnConnect" class="flex-1 bg-slate-800 text-white rounded-xl py-3 font-bold text-sm shadow-lg active:scale-95 transition-transform">
                 <i class="fab fa-bluetooth-b me-2"></i>Connect
             </button>
-            <button onclick="printManualReceipt()" class="flex-1 bg-green-500 text-white rounded-xl py-3 font-bold text-sm shadow-lg active:scale-95 transition-transform">
+            <button id="btnPrint" class="flex-1 bg-green-500 text-white rounded-xl py-3 font-bold text-sm shadow-lg active:scale-95 transition-transform">
                 <i class="fas fa-print me-2"></i>Cetak
             </button>
         </div>
@@ -63,82 +62,69 @@
     </section>
 </main>
 
-<script>
-    // Inisialisasi library
-    const receiptPrinter = new WebBluetoothReceiptPrinter();
-    let lastUsedDevice = null;
-    let printerLanguage = 'esc-pos'; // Default
-    let printerCodepageMapping = 'standard'; // Default
-    
-    // Event Listener saat printer terhubung
-    receiptPrinter.addEventListener('connected', device => {
-        console.log(`Connected to ${device.name} (#${device.id})`);
-        document.getElementById('statusPrinter').innerText = `Terhubung: ${device.name}`;
-        
-        // Ambil detail bahasa printer dari device
-        printerLanguage = device.language;
-        printerCodepageMapping = device.codepageMapping;
-        
-        lastUsedDevice = device;
-        
-        // Simpan ke local storage
-        localStorage.setItem('last_printer', JSON.stringify({
-            id: device.id, 
-            name: device.name,
-            language: device.language,
-            codepageMapping: device.codepageMapping
-        }));
-        
-        Swal.fire('Terhubung!', `Printer ${device.name} siap digunakan.`, 'success');
-    });
-    
-    // Mencoba Reconnect otomatis
+<script type="module">
+    import EscPosEncoder from "https://unpkg.com/esc-pos-encoder@1.0.1/dist/esc-pos-encoder.js";
+
+    let bluetoothDevice;
+    let printCharacteristic;
+
+    // Inisialisasi tombol setelah DOM dimuat
     window.onload = () => {
-        const saved = localStorage.getItem('last_printer');
-        if (saved) {
-            const config = JSON.parse(saved);
-            lastUsedDevice = config; // Set data awal
-            printerLanguage = config.language;
-            printerCodepageMapping = config.codepageMapping;
-            receiptPrinter.reconnect(config);
-        }
+        document.getElementById('btnConnect').onclick = () => connectBluetooth();
+        document.getElementById('btnPrint').onclick = () => printManualReceipt();
     };
-    
-    // Fungsi tombol Connect
-    async function handleConnectButtonClick() {
+
+    async function connectBluetooth() {
         try {
-            // Beberapa browser butuh interaksi user yang sangat jelas
-            await receiptPrinter.connect();
-        } catch (e) {
-            console.error(e);
-            // Jika error mengandung kata "User cancelled", itu berarti dialog ditutup
-            Swal.fire('Info', 'Koneksi dibatalkan atau printer tidak dipilih.', 'info');
+            const OPTIONAL_SERVICES = ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb'];
+            
+            bluetoothDevice = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: OPTIONAL_SERVICES
+            });
+
+            Swal.fire({ title: 'Menghubungkan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            const server = await bluetoothDevice.gatt.connect();
+            
+            // Mencari Service & Characteristic
+            const services = await server.getPrimaryServices();
+            for (const service of services) {
+                const characteristics = await service.getCharacteristics();
+                printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
+                if (printCharacteristic) break;
+            }
+
+            if (!printCharacteristic) throw new Error("Printer tidak mendukung pengiriman data.");
+
+            document.getElementById('statusPrinter').innerText = `Terhubung: ${bluetoothDevice.name}`;
+            Swal.fire('Berhasil!', `Printer ${bluetoothDevice.name} siap!`, 'success');
+
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Gagal', 'Koneksi dibatalkan atau error: ' + error.message, 'error');
         }
     }
-    
-    // Fungsi Cetak Struk
+
     async function printManualReceipt() {
-        if (!lastUsedDevice) {
-            return Swal.fire('Peringatan', 'Hubungkan printer dulu!', 'warning');
+        if (!printCharacteristic) {
+            return Swal.fire('Peringatan', 'Hubungkan bluetooth dulu!', 'warning');
         }
-    
+
         const nama = document.getElementById('manual-nama').value || '-';
         const alamat = document.getElementById('manual-alamat').value || '-';
         const tagihan = new Intl.NumberFormat('id-ID').format(document.getElementById('manual-tagihan').value || 0);
         const status = document.getElementById('manual-status').value;
-    
+
         try {
-            // Penting: Sertakan language dan codepage agar karakter tidak error
-            const encoder = new receiptPrinter.encoder({
-                language: printerLanguage,
-                codepageMapping: printerCodepageMapping
-            }); 
+            const encoder = new EscPosEncoder();
             
-            let data = encoder
+            // Membuat data cetak (Format 58mm / 32 Karakter)
+            const result = encoder
                 .initialize()
                 .align('center')
                 .line('SM@RT DIGITAL')
-                .line('WADAH RT 001/002')
+                .line('NUDESA MOBILE')
                 .line('--------------------------------')
                 .align('left')
                 .line(`NAMA  : ${nama.toUpperCase()}`)
@@ -152,14 +138,17 @@
                 .line('SIMPAN SEBAGAI BUKTI')
                 .newline()
                 .newline()
-                .cut() // Tambahkan cut jika printer mendukung
                 .encode();
-    
-            await receiptPrinter.print(data);
-            Swal.fire('Sukses', 'Struk berhasil dicetak!', 'success');
-        } catch (e) {
-            console.error(e);
-            Swal.fire('Error', 'Gagal mencetak: ' + e.message, 'error');
+
+            // Kirim data per paket 20 bytes (Wajib untuk Bluetooth Android)
+            const chunkSize = 20;
+            for (let i = 0; i < result.length; i += chunkSize) {
+                await printCharacteristic.writeValue(result.slice(i, i + chunkSize));
+            }
+
+            Swal.fire('Sukses', 'Struk dicetak!', 'success');
+        } catch (error) {
+            Swal.fire('Error', 'Gagal cetak: ' + error.message, 'error');
         }
     }
 </script>
