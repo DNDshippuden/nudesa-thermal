@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak Struk Bluetooth - Sm@RT Digital</title>
-    <!-- CDNs -->
+    <title>Cetak Struk Bluetooth - Sm@RT Digital-Nudesa</title>
+    
+    <!-- CDNs: Pastikan Library Encoder dimuat di awal -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Library Utama untuk Printer -->
     <script src="https://unpkg.com/esc-pos-encoder@2.1.0/dist/esc-pos-encoder.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -28,35 +30,34 @@
             outline: none;
             transition: border-color 0.2s;
         }
-        .input-box:focus { border-color: #3b82f6; }
     </style>
 </head>
 <body class="p-4">
 
 <main class="max-w-md mx-auto">
-    <!-- Section Input Manual -->
     <section class="manual-input-card" style="background: var(--surface); padding: 1.2rem; border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: 1.5rem; box-shadow: var(--shadow-soft);">
         <h3 style="margin-bottom: 1rem; font-size: 1rem; color: var(--primary-dark); font-weight: 700;">
             <i class="fas fa-file-invoice me-2"></i>Input Struk Manual
         </h3>
         
-        <div class="form-group" style="margin-bottom: 0.8rem;">
-            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.3rem;">Nama Pelanggan</label>
-            <input type="text" id="manual-nama" class="input-box" placeholder="Contoh: Desaku">
+        <!-- Form Inputs -->
+        <div class="form-group mb-3">
+            <label class="block text-xs font-semibold mb-1">Nama Pelanggan</label>
+            <input type="text" id="manual-nama" class="input-box" placeholder="Budi Santoso">
         </div>
 
-        <div class="form-group" style="margin-bottom: 0.8rem;">
-            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.3rem;">Alamat</label>
+        <div class="form-group mb-3">
+            <label class="block text-xs font-semibold mb-1">Alamat</label>
             <input type="text" id="manual-alamat" class="input-box" placeholder="Alamat lengkap">
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+        <div class="grid grid-cols-2 gap-3 mb-4">
             <div class="form-group">
-                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.3rem;">Tagihan (Rp)</label>
-                <input type="number" id="manual-tagihan" class="input-box" style="text-align: right;" placeholder="0">
+                <label class="block text-xs font-semibold mb-1">Tagihan (Rp)</label>
+                <input type="number" id="manual-tagihan" class="input-box text-right" placeholder="0">
             </div>
             <div class="form-group">
-                <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.3rem;">Status</label>
+                <label class="block text-xs font-semibold mb-1">Status</label>
                 <select id="manual-status" class="input-box">
                     <option value="KONTAN">KONTAN</option>
                     <option value="HUTANG">HUTANG</option>
@@ -64,11 +65,11 @@
             </div>
         </div>
 
-        <div style="margin-top: 1.2rem; display: flex; gap: 0.5rem;">
-            <button onclick="connectPrinterManually()" class="bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-all" style="flex: 1; padding: 0.8rem; font-size: 0.8rem; font-weight: 600;">
+        <div class="flex gap-2">
+            <button onclick="connectPrinterManually()" class="flex-1 bg-slate-800 text-white rounded-xl p-3 text-sm font-bold">
                 <i class="fab fa-bluetooth me-1"></i>Hubungkan
             </button>
-            <button onclick="printManualReceipt()" class="bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all" style="flex: 1; padding: 0.8rem; font-size: 0.8rem; font-weight: 600;">
+            <button onclick="printManualReceipt()" class="flex-1 bg-green-500 text-white rounded-xl p-3 text-sm font-bold">
                 <i class="fas fa-print me-1"></i>Cetak Struk
             </button>
         </div>
@@ -79,68 +80,52 @@
     let bluetoothDevice;
     let printCharacteristic;
 
-    // 1. Fungsi Hubungkan Printer Bluetooth
+    // Fungsi Koneksi Bluetooth
     async function connectPrinterManually() {
         try {
-            // Daftar UUID Service umum yang digunakan oleh printer thermal
             const OPTIONAL_SERVICES = [
-                '000018f0-0000-1000-8000-00805f9b34fb', // Umum
-                '0000ff00-0000-1000-8000-00805f9b34fb', // Perbaikan untuk alias 'ff00'
-                'e7e11001-49d2-4d15-8c74-e91155a1040a'  // Printer merek tertentu
+                '000018f0-0000-1000-8000-00805f9b34fb',
+                '0000ff00-0000-1000-8000-00805f9b34fb',
+                'e7e11001-49d2-4d15-8c74-e91155a1040a'
             ];
-    
-            // Meminta izin akses perangkat
+
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
                 optionalServices: OPTIONAL_SERVICES
             });
-    
-            Swal.fire({ 
-                title: 'Menghubungkan...', 
-                text: `Menyambungkan ke ${bluetoothDevice.name}`,
-                allowOutsideClick: false, 
-                didOpen: () => Swal.showLoading() 
-            });
-    
+
+            Swal.fire({ title: 'Menghubungkan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
             const server = await bluetoothDevice.gatt.connect();
             
-            // Mencari service yang tersedia dari daftar UUID di atas
             let service;
             for (const uuid of OPTIONAL_SERVICES) {
                 try {
                     service = await server.getPrimaryService(uuid);
                     if (service) break;
-                } catch (e) {
-                    continue; // Lanjut cari jika service UUID ini tidak ditemukan di perangkat
-                }
+                } catch (e) { continue; }
             }
-    
-            if (!service) throw new Error("Service printer tidak ditemukan. Pastikan printer menyala.");
-    
+
+            if (!service) throw new Error("Service printer tidak ditemukan.");
+
             const characteristics = await service.getCharacteristics();
-            
-            // Mencari characteristic yang mendukung penulisan (Write)
-            printCharacteristic = characteristics.find(c => 
-                c.properties.write || c.properties.writeWithoutResponse
-            );
-    
+            printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
+
             if (!printCharacteristic) throw new Error("Karakteristik tulis tidak ditemukan.");
-    
-            Swal.fire({
-                icon: 'success',
-                title: 'Berhasil!',
-                text: `Terhubung ke ${bluetoothDevice.name}`,
-                timer: 2000
-            });
-    
+
+            Swal.fire('Berhasil!', `Terhubung ke ${bluetoothDevice.name}`, 'success');
         } catch (error) {
-            console.error("Bluetooth Error:", error);
             Swal.fire('Gagal', error.message, 'error');
         }
     }
 
-    // 2. Fungsi Cetak Struk Manual
+    // Fungsi Cetak dengan Pengecekan Library
     async function printManualReceipt() {
+        // 1. Cek apakah library sudah dimuat
+        if (typeof EscPosEncoder === 'undefined') {
+            return Swal.fire('Error', 'Library Cetak belum dimuat sempurna. Tunggu sebentar atau refresh halaman.', 'error');
+        }
+
         if (!printCharacteristic) {
             return Swal.fire('Peringatan', 'Hubungkan printer Bluetooth terlebih dahulu!', 'warning');
         }
@@ -151,6 +136,7 @@
         const status = document.getElementById('manual-status').value;
 
         try {
+            // Memanggil constructor library secara eksplisit
             const encoder = new EscPosEncoder();
             const formattedTagihan = new Intl.NumberFormat('id-ID').format(tagihan);
 
@@ -158,25 +144,22 @@
                 .initialize()
                 .align('center')
                 .line('SM@RT DIGITAL')
-                .line('RT 001/002 - Kelurahan')
-                .line('--------------------------------') // 32 chars for 58mm
-                .align('left')
-                .line(`Nama  : ${nama.substring(0, 20)}`)
-                .line(`Almt  : ${alamat.substring(0, 20)}`)
-                .line(`Tgl   : ${new Date().toLocaleDateString('id-ID')}`)
+                .line('RT 001/002 - WADAH RT')
                 .line('--------------------------------')
                 .align('left')
+                .line(`NAMA  : ${nama.substring(0, 22)}`)
+                .line(`ALMT  : ${alamat.substring(0, 22)}`)
+                .line(`TGL   : ${new Date().toLocaleDateString('id-ID')}`)
+                .line('--------------------------------')
                 .line(`TOTAL : Rp ${formattedTagihan}`)
                 .line(`STATUS: ${status}`)
                 .line('--------------------------------')
                 .align('center')
-                .line('Terima Kasih Atas')
-                .line('Pembayaran Anda')
+                .line('TERIMA KASIH')
                 .newline()
                 .newline()
                 .encode();
 
-            // Mengirim data per paket (chunk) 20 bytes agar stabil di Android
             const chunkSize = 20;
             for (let i = 0; i < data.length; i += chunkSize) {
                 await printCharacteristic.writeValue(data.slice(i, i + chunkSize));
